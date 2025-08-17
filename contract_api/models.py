@@ -46,28 +46,28 @@ class ExtractedFields(models.Model):
     
     # Key dates and terms
     effective_date = models.DateField(null=True, blank=True)
-    term = models.CharField(max_length=255, blank=True, help_text="Contract term/duration")
+    term = models.CharField(max_length=255, null=True, blank=True, help_text="Contract term/duration")
     termination_date = models.DateField(null=True, blank=True)
     
     # Legal and financial terms
-    governing_law = models.CharField(max_length=100, blank=True)
-    payment_terms = models.TextField(blank=True)
+    governing_law = models.CharField(max_length=100, null=True, blank=True)
+    payment_terms = models.TextField(null=True, blank=True)
     auto_renewal = models.BooleanField(null=True, blank=True)
     auto_renewal_notice_days = models.IntegerField(null=True, blank=True)
     
     # Risk-related fields
-    confidentiality = models.TextField(blank=True)
-    indemnity = models.TextField(blank=True)
+    confidentiality = models.TextField(null=True, blank=True)
+    indemnity = models.TextField(null=True, blank=True)
     liability_cap_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    liability_cap_currency = models.CharField(max_length=3, blank=True, help_text="ISO currency code")
+    liability_cap_currency = models.CharField(max_length=3, null=True, blank=True, help_text="ISO currency code")
     
     # Signatories
     signatories = models.JSONField(default=list, help_text="List of signatories with name, title, date")
     
     # Additional extracted fields
-    contract_type = models.CharField(max_length=100, blank=True)
+    contract_type = models.CharField(max_length=100, null=True, blank=True)
     total_value = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    value_currency = models.CharField(max_length=3, blank=True)
+    value_currency = models.CharField(max_length=3, null=True, blank=True)
     
     # Processing metadata
     extraction_confidence = models.FloatField(null=True, blank=True)
