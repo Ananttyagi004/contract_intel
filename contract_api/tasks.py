@@ -1,10 +1,11 @@
 import PyPDF2
 import os
+import google.generativeai as genai
 from celery import shared_task
 from django.core.files.storage import default_storage
 from django.conf import settings
 from .models import Document, DocumentPage
-
+import openai
 
 @shared_task(bind=True)
 def process_pdf_async(self, document_id, file_path):
@@ -29,7 +30,10 @@ def process_pdf_async(self, document_id, file_path):
                     text = page.extract_text()
                     
                     # Create text chunks (simple sentence-based chunking)
-                    chunks = create_text_chunks(text)
+                    chunks = create_text_chunks(text,page_num+1)
+                    
+                    # Generate embeddings using Gemini
+                    embeddings = embed_texts(chunks)
                     
                     # Create DocumentPage record
                     DocumentPage.objects.create(
@@ -37,7 +41,7 @@ def process_pdf_async(self, document_id, file_path):
                         page_number=page_num + 1,  # 1-indexed
                         text=text,
                         text_chunks=chunks,
-                        chunk_embeddings=[]  # Initialize empty embeddings
+                        chunk_embeddings=embeddings
                     )
                     
                     # Update task progress
@@ -67,36 +71,107 @@ def process_pdf_async(self, document_id, file_path):
         raise
 
 
-def create_text_chunks(text, max_chunk_size=1000):
+def create_text_chunks(text,page_number, max_chunk_size=1000):
     """
-    Create text chunks for vector search
+    Create text chunks for vector search.
+    Always returns list of dicts: {text, start, end}
     """
-    if not text or len(text) <= max_chunk_size:
-        return [text] if text else []
-    
-    # Simple sentence splitting
-    sentences = text.replace('\n', ' ').split('. ')
+    if not text:
+        return []
+
+    # If somehow text is already a list of strings (bad input), wrap into dicts
+    if isinstance(text, list):
+        return [
+            {"text": str(t), "start": 0, "end": len(str(t)), "page_number": page_number}
+            for t in text
+        ]
+
+    # Normal case: text is a string
+    if len(text) <= max_chunk_size:
+        return [{"text": text.strip(), "start": 0, "end": len(text)}]
+
+    sentences = text.replace("\n", " ").split(". ")
     chunks = []
     current_chunk = ""
-    
+    start = 0
+
     for sentence in sentences:
         sentence = sentence.strip()
         if not sentence:
             continue
-            
-        # Add period back if it was removed
-        if not sentence.endswith('.'):
-            sentence += '.'
-        
-        # If adding this sentence would exceed chunk size, save current chunk
+
+        if not sentence.endswith("."):
+            sentence += "."
+
         if len(current_chunk) + len(sentence) > max_chunk_size and current_chunk:
-            chunks.append(current_chunk.strip())
+            end = start + len(current_chunk)
+            chunks.append({"text": current_chunk.strip(), "start": start, "end": end, "page_number": page_number})
+            start = end
             current_chunk = sentence
         else:
             current_chunk += " " + sentence if current_chunk else sentence
-    
-    # Add the last chunk
+
     if current_chunk:
-        chunks.append(current_chunk.strip())
-    
+        end = start + len(current_chunk)
+        chunks.append({"text": current_chunk.strip(), "start": start, "end": end, "page_number": page_number})
+
     return chunks
+
+
+
+import google.generativeai as genai
+from django.conf import settings
+
+def embed_texts(text_chunks):
+    """
+    Generate embeddings using Gemini's embedding model.
+    Expects a list of dicts like:
+    [{"text": "...", "start": 0, "end": 100}, ...]
+    """
+    try:
+        api_key = getattr(settings, 'GEMINI_API_KEY', None)
+        if not api_key:
+            print("Warning: GEMINI_API_KEY not set. Returning empty embeddings.")
+            return []
+        
+        # Configure Gemini client
+        genai.configure(api_key=api_key)
+
+        embeddings = []
+        for chunk in text_chunks:
+            # ✅ Always extract the actual text
+            text = ""
+            if isinstance(chunk, dict):
+                text = chunk.get("text", "")
+            elif isinstance(chunk, str):
+                text = chunk
+            else:
+                text = str(chunk)
+
+            if text.strip():
+                try:
+                    result = genai.embed_content(
+                        model="models/embedding-001",
+                        content=text,
+                        task_type="retrieval_document"
+                    )
+                    embedding = result["embedding"]
+                    embeddings.append(embedding)
+                except Exception as e:
+                    print(f"Error generating embedding for chunk: {str(e)}")
+                    embeddings.append([0.0] * 768)  # fallback
+            else:
+                embeddings.append([0.0] * 768)
+
+        return embeddings
+
+    except Exception as e:
+        print(f"Error in embed_texts: {str(e)}")
+        return []
+
+
+
+
+
+
+

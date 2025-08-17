@@ -103,3 +103,19 @@ class ExtractResponseSerializer(serializers.Serializer):
     document_id = serializers.UUIDField(help_text="ID of the processed document")
     extraction_method = serializers.CharField(help_text="Method used for extraction")
     extracted_fields = ExtractedFieldsResponseSerializer(help_text="Extracted contract fields")
+
+
+class RAGRequestSerializer(serializers.Serializer):
+    document_id = serializers.UUIDField(help_text="UUID of the document to query against")
+    query = serializers.CharField(help_text="User query text")
+
+
+class CitationSerializer(serializers.Serializer):
+    page = serializers.IntegerField()
+    start = serializers.IntegerField()
+    end = serializers.IntegerField()
+
+
+class RAGResponseSerializer(serializers.Serializer):
+    answer = serializers.CharField()
+    citations = CitationSerializer(many=True)

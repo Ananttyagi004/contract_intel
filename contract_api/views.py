@@ -228,3 +228,55 @@ class ExtractAPIView(APIView):
             extracted_obj.save()
 
 
+import google.generativeai as genai
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
+
+from .models import Document
+from .serializers import RAGRequestSerializer, RAGResponseSerializer
+from .utility_rag import retrieve_relevant_chunks, build_prompt
+
+
+class DocumentQnAView(APIView):
+    """
+    POST API that answers questions based on a document (RAG style).
+    """
+
+    @extend_schema(
+        request=RAGRequestSerializer,
+        responses={200: RAGResponseSerializer},
+        description="Answer a question based on a document using RAG. "
+                    "Returns the answer and the page/char ranges (citations)."
+        
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = RAGRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        document = get_object_or_404(Document, id=data["document_id"])
+
+        # Step 1: Retrieve top chunks
+        retrieved_chunks = retrieve_relevant_chunks(data["query"], document, top_k=5)
+
+        # Step 2: Build augmented prompt
+        prompt = build_prompt(data["query"], retrieved_chunks)
+
+        # Step 3: Generate answer
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt)
+
+        # Step 4: Prepare response payload
+        response_payload = {
+            "answer": response.text,
+            "citations": [
+                {"page": c["page_number"], "start": c["start"], "end": c["end"]}
+                for c in retrieved_chunks
+            ]
+        }
+
+        response_serializer = RAGResponseSerializer(response_payload)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
