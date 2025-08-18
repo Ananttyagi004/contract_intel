@@ -119,3 +119,19 @@ class CitationSerializer(serializers.Serializer):
 class RAGResponseSerializer(serializers.Serializer):
     answer = serializers.CharField()
     citations = CitationSerializer(many=True)
+
+
+from rest_framework import serializers
+from .models import AuditFinding
+
+class AuditRequestSerializer(serializers.Serializer):
+    document_id = serializers.UUIDField()
+
+class AuditFindingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuditFinding
+        fields = "__all__"
+
+class AuditResponseSerializer(serializers.Serializer):
+    findings = AuditFindingSerializer(many=True)
+

@@ -6,4 +6,5 @@ urlpatterns = [
     path('ingest/', views.IngestAPIView.as_view(), name='ingest'),
     path('extract/', views.ExtractAPIView.as_view(), name='extract'),
     path('ask/', views.DocumentQnAView.as_view(), name='rag'),
+    path("audit/", views.AuditView.as_view(), name="audit"),
 ]

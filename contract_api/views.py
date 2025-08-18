@@ -280,3 +280,33 @@ class DocumentQnAView(APIView):
 
         response_serializer = RAGResponseSerializer(response_payload)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from drf_spectacular.utils import extend_schema
+
+from .serializers import AuditRequestSerializer, AuditResponseSerializer, AuditFindingSerializer
+from .models import Document
+from .utility_audit import run_audit
+
+class AuditView(APIView):
+    @extend_schema(
+        request=AuditRequestSerializer,
+        responses=AuditResponseSerializer,
+        description="Run automated contract audit to detect risky clauses"
+    )
+    def post(self, request):
+        serializer = AuditRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            document = Document.objects.get(id=serializer.validated_data["document_id"])
+        except Document.DoesNotExist:
+            return Response({"error": "Document not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        findings = run_audit(document)
+
+        response_serializer = AuditResponseSerializer({"findings": findings}, many=False)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
