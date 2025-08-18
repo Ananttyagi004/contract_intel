@@ -7,4 +7,5 @@ urlpatterns = [
     path('extract/', views.ExtractAPIView.as_view(), name='extract'),
     path('ask/', views.DocumentQnAView.as_view(), name='rag'),
     path("audit/", views.AuditView.as_view(), name="audit"),
+    path("ask/stream/", views.DocumentQnAStreamView.as_view(), name="document-qna-stream"),
 ]

@@ -310,3 +310,73 @@ class AuditView(APIView):
 
         response_serializer = AuditResponseSerializer({"findings": findings}, many=False)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+import json
+import google.generativeai as genai
+from django.http import StreamingHttpResponse
+from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from drf_spectacular.utils import extend_schema
+from contract_api.models import Document
+from contract_api.utility_rag import retrieve_relevant_chunks, build_prompt
+from drf_spectacular.utils import OpenApiParameter
+
+class DocumentQnAStreamView(APIView):
+    """
+    GET API that streams RAG answers using SSE.
+    Example: /ask/stream?document_id=<uuid>&query=<text>
+    """
+
+    @extend_schema(
+        parameters=[
+        OpenApiParameter(name="document_id", description="UUID of the document", required=True, type=str),
+        OpenApiParameter(name="query", description="User question to ask", required=True, type=str),
+                        ],
+        responses={200: None},
+        description="Stream an answer (token by token) for a given document using RAG. "
+                    "Events have JSON with type: token, citations, end, error."
+    )
+    def get(self, request, *args, **kwargs):
+        query = request.query_params.get("query")
+        document_id = request.query_params.get("document_id")
+        if not query or not document_id:
+            return StreamingHttpResponse(
+                iter([f"data: {json.dumps({'type': 'error', 'message': 'Missing query or document_id'})}\n\n"]),
+                content_type="text/event-stream"
+            )
+
+        document = get_object_or_404(Document, id=document_id)
+
+        def event_stream():
+            try:
+                # Step 1: retrieve chunks
+                retrieved_chunks = retrieve_relevant_chunks(query, document, top_k=5)
+
+                # Step 2: build prompt
+                prompt = build_prompt(query, retrieved_chunks)
+
+                # Step 3: stream response from Gemini
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content(prompt, stream=True)
+
+                for chunk in response:
+                    if chunk.candidates and chunk.candidates[0].content.parts:
+                        token = chunk.candidates[0].content.parts[0].text
+                        yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
+
+                # Step 4: send citations at the end
+                citations = [
+                    {"page": c["page_number"], "start": c["start"], "end": c["end"]}
+                    for c in retrieved_chunks
+                ]
+                yield f"data: {json.dumps({'type': 'citations', 'data': citations})}\n\n"
+
+                # Step 5: signal end of stream
+                yield f"data: {json.dumps({'type': 'end'})}\n\n"
+
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
