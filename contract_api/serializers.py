@@ -135,3 +135,14 @@ class AuditFindingSerializer(serializers.ModelSerializer):
 class AuditResponseSerializer(serializers.Serializer):
     findings = AuditFindingSerializer(many=True)
 
+class HealthzResponseSerializer(serializers.Serializer):
+    status = serializers.CharField(help_text="Status of the service (ok/unhealthy)")
+    error = serializers.CharField(
+        required=False,
+        help_text="Error details if service is unhealthy"
+    )
+
+
+class MetricsResponseSerializer(serializers.Serializer):
+    uptime_seconds = serializers.IntegerField(help_text="Service uptime in seconds")
+    request_count = serializers.IntegerField(help_text="Number of requests handled")

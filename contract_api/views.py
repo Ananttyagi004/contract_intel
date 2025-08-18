@@ -380,3 +380,61 @@ class DocumentQnAStreamView(APIView):
                 yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
         return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+
+import time
+from django.db import connection
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from drf_spectacular.utils import extend_schema
+
+from .serializers import HealthzResponseSerializer, MetricsResponseSerializer
+
+
+class HealthzView(APIView):
+    """
+    GET /healthz
+    Simple health check endpoint.
+    """
+
+    @extend_schema(
+        description="Health check endpoint. Returns 200 if API and DB are reachable.",
+        responses={200: HealthzResponseSerializer},
+    )
+    def get(self, request, *args, **kwargs):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1;")
+            return Response({"status": "ok"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"status": "unhealthy", "error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+REQUEST_COUNT = 0
+START_TIME = time.time()
+
+
+class MetricsView(APIView):
+    """
+    GET /metrics
+    Exposes simple metrics like uptime and request count.
+    """
+
+    @extend_schema(
+        description="Basic metrics endpoint (uptime, request count).",
+        responses={200: MetricsResponseSerializer},
+    )
+    def get(self, request, *args, **kwargs):
+        global REQUEST_COUNT
+        REQUEST_COUNT += 1
+        uptime = int(time.time() - START_TIME)
+
+        metrics = {
+            "uptime_seconds": uptime,
+            "request_count": REQUEST_COUNT,
+        }
+        return Response(metrics, status=status.HTTP_200_OK)
+
