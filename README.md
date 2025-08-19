@@ -1,124 +1,112 @@
 # Contract Intelligence API
 
-A production-ready Django-based API for intelligent contract analysis, field extraction, question answering, and risk assessment.
+A production-ready Django-based API for intelligent contract analysis, field extraction, and risk assessment using AI-powered document processing.
 
 ## 🚀 Features
 
 - **Document Ingestion**: Upload and process PDF contracts with automatic text extraction
 - **Field Extraction**: AI-powered extraction of structured contract fields (parties, dates, terms, etc.)
 - **Question Answering**: RAG-based Q&A over contract content with citations
-- **Risk Assessment**: Automated detection of risky contract clauses
+- **Streaming Responses**: Real-time streaming answers using Server-Sent Events
+- **Risk Assessment**: Automated detection of risky contract clauses and compliance issues
 - **Background Processing**: Celery-based async processing with progress tracking
-- **Webhook Support**: Real-time notifications for completed tasks
 - **Comprehensive Admin**: Django admin interface for monitoring and management
 - **OpenAPI Documentation**: Auto-generated API documentation with Swagger UI
+- **Vector Search**: FAISS-based text chunking and embedding for intelligent document analysis
 
 ## 🏗️ Architecture
 
-- **Backend**: Django 5.2 + Django REST Framework
-- **Database**: PostgreSQL with comprehensive models
-- **Task Queue**: Celery + Redis for background processing
-- **AI/ML**: OpenAI GPT-4 for field extraction and Q&A
-- **Vector Search**: FAISS for RAG-based question answering
-- **Document Processing**: PyPDF2 + textract for PDF text extraction
-- **Containerization**: Docker + Docker Compose for easy deployment
+- **Backend**: Django 5.2 + Django REST Framework for REST APIs
+- **Database**: PostgreSQL with normalized models for documents, pages, embeddings, and audit findings
+- **Task Queue**: Celery + Redis for background processing (text extraction, field extraction, async tasks)
+- **AI/ML**: Google Gemini models for embeddings and contract analysis
+- **Vector Search**: FAISS for retrieval-augmented generation (RAG) and text chunking
+- **Document Processing**: PyPDF2 for PDF ingestion, page splitting, and text extraction
+- **Monitoring**: Health endpoints and comprehensive logging
+- **Containerization**: Docker + Docker Compose for reproducible deployment and scaling
 
 ## 📋 API Endpoints
 
 ### Core Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/documents/` | Upload contract documents |
-| `GET` | `/api/documents/` | List all documents |
-| `GET` | `/api/documents/{id}/` | Get document details |
-| `POST` | `/api/documents/{id}/extract_fields/` | Manually trigger field extraction |
-| `POST` | `/api/documents/{id}/run_audit/` | Manually trigger audit analysis |
-| `GET` | `/api/documents/{id}/status/` | Get processing status |
+- **Document Upload**: `POST /api/ingest/` - Upload and process PDF contracts
+- **Field Extraction**: `POST /api/extract/` - Extract structured contract fields using AI
+- **Document Q&A**: `POST /api/ask/` - Ask questions about contracts using RAG
+- **Streaming Q&A**: `GET /api/ask/stream/` - Stream answers with Server-Sent Events
+- **Contract Audit**: `POST /api/audit/` - Run automated risk assessment
+- **Health Check**: `GET /healthz/` - System health status
+- **Metrics**: `GET /metrics/` - System performance metrics
 
-### Field Extraction
+### API Documentation
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/extracted-fields/` | List extracted fields |
-| `GET` | `/api/extracted-fields/{id}/` | Get extracted fields for a document |
-| `GET` | `/api/extracted-fields/summary/` | Get extraction statistics |
-
-### Question Answering
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/questions/ask/` | Ask a question about contracts |
-| `GET` | `/api/questions/` | List all questions |
-| `GET` | `/api/questions/{id}/` | Get question details |
-| `GET` | `/api/ask/stream/{id}/` | Stream question answer generation |
-
-### Audit & Risk Analysis
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/audit-findings/` | List audit findings |
-| `GET` | `/api/audit-findings/{id}/` | Get audit finding details |
-| `GET` | `/api/audit-findings/summary/` | Get audit statistics |
-| `GET` | `/api/audit-findings/high_risk/` | Get high-risk findings |
-
-### Admin & Monitoring
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/healthz/` | Health check |
-| `GET` | `/api/metrics/` | System metrics |
-| `GET` | `/api/docs/` | Swagger UI documentation |
-| `GET` | `/api/schema/` | OpenAPI schema |
-
-### Webhooks
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/webhooks/configure/` | Configure webhook endpoints |
-| `GET` | `/api/webhooks/` | List webhook events |
+- **Swagger UI**: `/api/docs/` - Interactive API documentation
+- **ReDoc**: `/api/redoc/` - Alternative API documentation
+- **OpenAPI Schema**: `/api/schema/` - Raw OpenAPI specification
 
 ## 🛠️ Setup & Installation
 
 ### Prerequisites
 
 - Docker and Docker Compose
-- OpenAI API key (for AI features)
-- PostgreSQL (included in Docker setup)
+- Google Gemini API key (for AI features)
+- Python 3.8+ (for local development)
 
 ### Quick Start
 
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd ContractIntelligence
+   cd contract_intel
    ```
 
 2. **Create environment file**
    ```bash
    cp .env.example .env
-   # Edit .env with your OpenAI API key and other settings
+   # Edit .env with your Google Gemini API key and other settings
    ```
 
 3. **Start the services**
    ```bash
-   docker-compose up -d
+   make up
+   # or manually: docker-compose up -d
    ```
 
 4. **Run migrations**
    ```bash
-   docker-compose exec web python manage.py migrate
+   make migrate
+   # or manually: docker-compose exec web python manage.py migrate
    ```
 
 5. **Create superuser**
    ```bash
-   docker-compose exec web python manage.py createsuperuser
+   make superuser
+   # or manually: docker-compose exec web python manage.py createsuperuser
    ```
 
 6. **Access the application**
    - API: http://localhost:8000/api/
    - Admin: http://localhost:8000/admin/
    - Docs: http://localhost:8000/api/docs/
+
+### Alternative: Local Development Setup
+
+1. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Set up environment variables**
+   ```bash
+   export DEBUG=1
+   export SECRET_KEY=your-secret-key-here
+   export OPENAI_API_KEY=your-gemini-api-key-here
+   ```
+
+3. **Run the application**
+   ```bash
+   python manage.py migrate
+   python manage.py runserver
+   ```
 
 ### Environment Variables
 
@@ -128,14 +116,14 @@ SECRET_KEY=your-secret-key-here
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
 
-# Database
+# Database (for local development)
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/contract_intel
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
 
-# OpenAI
-OPENAI_API_KEY=your-openai-api-key-here
+# AI Services
+OPENAI_API_KEY=your-gemini-api-key-here
 
 # File Storage
 MEDIA_URL=/media/
@@ -151,93 +139,100 @@ CELERY_RESULT_BACKEND=redis://localhost:6379/0
 ### 1. Upload a Contract
 
 ```bash
-curl -X POST http://localhost:8000/api/documents/ \
+curl -X POST http://localhost:8000/api/ingest/ \
   -H "Content-Type: multipart/form-data" \
-  -F "title=Service Agreement" \
-  -F "file=@contract.pdf"
+  -F "files=@contract.pdf"
 ```
 
 **Response:**
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "title": "Service Agreement",
-  "status": "uploaded",
-  "uploaded_at": "2024-01-15T10:30:00Z"
+  "success": true,
+  "message": "Files uploaded successfully. Text extraction in progress.",
+  "document_ids": ["550e8400-e29b-41d4-a716-446655440000"],
+  "documents": [...]
 }
 ```
 
-### 2. Ask a Question
+### 2. Extract Contract Fields
 
 ```bash
-curl -X POST http://localhost:8000/api/questions/ask/ \
+curl -X POST http://localhost:8000/api/extract/ \
+  -H "Content-Type: application/json" \
+  -d '{"document_id": "550e8400-e29b-41d4-a716-446655440000"}'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Contract fields extracted successfully using Gemini Flash LLM",
+  "document_id": "550e8400-e29b-41d4-a716-446655440000",
+  "extraction_method": "pure_llm_gemini_flash",
+  "extracted_fields": {
+    "parties": [...],
+    "effective_date": "2024-01-15",
+    "payment_terms": "Net 30 days",
+    "auto_renewal": true,
+    "governing_law": "California",
+    "confidentiality": "Standard NDA terms apply"
+  }
+}
+```
+
+### 3. Ask Questions About Contracts (RAG)
+
+```bash
+curl -X POST http://localhost:8000/api/ask/ \
   -H "Content-Type: application/json" \
   -d '{
-    "question_text": "What are the payment terms in the contract?",
-    "document_ids": ["550e8400-e29b-41d4-a716-446655440000"]
+    "document_id": "550e8400-e29b-41d4-a716-446655440000",
+    "query": "What are the payment terms in this contract?"
   }'
 ```
 
 **Response:**
 ```json
 {
-  "message": "Question submitted for processing",
-  "question_id": "660e8400-e29b-41d4-a716-446655440001",
-  "status": "pending"
-}
-```
-
-### 3. Get Question Answer
-
-```bash
-curl http://localhost:8000/api/questions/660e8400-e29b-41d4-a716-446655440001/
-```
-
-**Response:**
-```json
-{
-  "id": "660e8400-e29b-41d4-a716-446655440001",
-  "question_text": "What are the payment terms in the contract?",
   "answer": "The contract specifies payment terms of Net 30 days...",
   "citations": [
     {
-      "document_id": "550e8400-e29b-41d4-a716-446655440000",
-      "text": "Payment shall be made within 30 days...",
-      "page_number": 5
+      "page": 5,
+      "start": 120,
+      "end": 180
     }
-  ],
-  "status": "completed"
+  ]
 }
 ```
 
-### 4. Check Processing Status
+### 4. Stream Answers (Server-Sent Events)
 
 ```bash
-curl http://localhost:8000/api/documents/550e8400-e29b-41d4-a716-446655440000/status/
+curl "http://localhost:8000/api/ask/stream/?document_id=550e8400-e29b-41d4-a716-446655440000&query=What%20are%20the%20payment%20terms?"
+```
+
+**Response (SSE stream):**
+```
+data: {"type": "token", "text": "The"}
+data: {"type": "token", "text": " contract"}
+data: {"type": "token", "text": " specifies..."}
+data: {"type": "citations", "data": [{"page": 5, "start": 120, "end": 180}]}
+data: {"type": "end"}
+```
+
+### 5. Run Contract Audit
+
+```bash
+curl -X POST http://localhost:8000/api/audit/ \
+  -H "Content-Type: application/json" \
+  -d '{"document_id": "550e8400-e29b-41d4-a716-446655440000"}'
 ```
 
 **Response:**
 ```json
 {
-  "document_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "processing",
-  "progress_percentage": 75,
-  "current_step": "Running audit analysis"
-}
-```
-
-### 5. Get Audit Findings
-
-```bash
-curl http://localhost:8000/api/audit-findings/?document=550e8400-e29b-41d4-a716-446655440000
-```
-
-**Response:**
-```json
-{
-  "results": [
+  "findings": [
     {
-      "id": "770e8400-e29b-41d4-a716-446655440002",
       "finding_type": "auto_renewal",
       "severity": "high",
       "title": "Insufficient Auto-renewal Notice Period",
@@ -251,26 +246,29 @@ curl http://localhost:8000/api/audit-findings/?document=550e8400-e29b-41d4-a716-
 
 ## 🔧 Configuration
 
-### Webhook Setup
+### Makefile Commands
 
-Configure webhooks to receive notifications when tasks complete:
+The project includes a comprehensive Makefile for common operations:
 
 ```bash
-curl -X POST http://localhost:8000/api/webhooks/configure/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "webhook_url": "https://your-app.com/webhooks",
-    "event_types": ["document_processed", "question_answered", "audit_completed"]
-  }'
+make help          # Show all available commands
+make up            # Start all services
+make down          # Stop all services
+make logs          # View logs from all services
+make shell         # Open Django shell
+make migrate       # Run database migrations
+make test          # Run tests
+make clean         # Clean up containers and images
+make setup         # Complete initial setup
 ```
 
-### Custom Risk Rules
+### Custom Field Extraction
 
-Modify `AuditAnalysisService` in `services.py` to add custom risk detection rules.
+Modify the extraction prompts in `ContractExtractionService` to extract additional contract fields.
 
-### Field Extraction
+### Risk Assessment Rules
 
-Customize the extraction prompt in `FieldExtractionService` to extract additional fields.
+Customize the audit analysis logic to add custom risk detection rules.
 
 ## 📊 Monitoring & Admin
 
@@ -279,7 +277,7 @@ Customize the extraction prompt in `FieldExtractionService` to extract additiona
 Access the admin interface at `/admin/` to:
 - Monitor document processing status
 - View extracted fields and audit findings
-- Manage webhook configurations
+- Manage system configurations
 - Track background tasks
 
 ### Health Checks
@@ -288,17 +286,18 @@ Access the admin interface at `/admin/` to:
 # System health
 curl http://localhost:8000/healthz/
 
-# System metrics
-curl http://localhost:8000/api/metrics/
+# Service status
+make status
 ```
 
 ### Logs
 
 View application logs:
 ```bash
-docker-compose logs web
-docker-compose logs celery
-docker-compose logs redis
+make logs          # All services
+make logs-web      # Web service only
+make logs-celery   # Celery worker only
+make logs-db       # Database only
 ```
 
 ## 🚀 Production Deployment
@@ -310,7 +309,7 @@ Set production values:
 DEBUG=False
 SECRET_KEY=<strong-secret-key>
 ALLOWED_HOSTS=<your-domain>
-OPENAI_API_KEY=<your-openai-key>
+OPENAI_API_KEY=<your-gemini-key>
 ```
 
 ### Database
@@ -324,7 +323,7 @@ DATABASE_URL=postgres://user:password@host:port/dbname
 
 Collect and serve static files:
 ```bash
-python manage.py collectstatic
+make collectstatic
 ```
 
 ### SSL/HTTPS
@@ -335,20 +334,22 @@ Configure reverse proxy (nginx) with SSL certificates.
 
 ### Run Tests
 ```bash
-docker-compose exec web python manage.py test
+make test
+make test-verbose  # With detailed output
 ```
 
 ### API Testing
 Use the included Swagger UI at `/api/docs/` or tools like Postman.
 
-## 📚 Sample Contracts
+## 📚 Supported Contract Types
 
-The system works with any PDF contracts. For testing, you can use:
+The system works with any PDF contracts, including:
 - NDAs (Non-Disclosure Agreements)
 - MSAs (Master Service Agreements)
 - Terms of Service documents
 - Employment contracts
 - Vendor agreements
+- Service level agreements (SLAs)
 
 ## 🤝 Contributing
 
@@ -378,4 +379,6 @@ For support and questions:
 - [ ] Advanced risk scoring algorithms
 - [ ] Contract template generation
 - [ ] Compliance checking against regulations
-- [ ] Machine learning model fine-tuning 
+- [ ] Machine learning model fine-tuning
+- [ ] Real-time collaboration features
+- [ ] Advanced analytics and reporting 
